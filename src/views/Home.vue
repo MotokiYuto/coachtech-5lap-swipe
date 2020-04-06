@@ -53,7 +53,7 @@ export default {
       this.swipe.flag = true;
       this.swipe.start.x = e.touches[0].pageX;
     },
-    OnTouchMove: async function(e, index, url) {
+    OnTouchMove: function(e, index, url) {
       this.swipe.current.x = e.touches[0].pageX;
       this.swipe.distance.x = this.swipe.current.x - this.swipe.start.x;
       if (
@@ -78,7 +78,7 @@ export default {
         this.startProcessing();
         this.swipe.flag = false;
         this.rotateLeft(e);
-        await this.deleteLikes(url);
+        this.deleteLikes(url);
       }
     },
     OnTouchEnd: function() {
