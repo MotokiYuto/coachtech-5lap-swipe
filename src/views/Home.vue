@@ -221,8 +221,8 @@ export default {
 
 /* tinderスライド描画 */
 #container {
-  width: 50%;
-  padding: 100px 0 50px;
+  width: 30%;
+  padding: 50px 0;
   margin: auto !important;
   display: block;
   height: 600px;
@@ -280,7 +280,7 @@ export default {
   #container {
     width: 80%;
     height: 500px;
-    padding-bottom: 100px;
+    padding: 100px 0;
   }
 }
 </style>
