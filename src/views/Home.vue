@@ -10,13 +10,13 @@
         @touchend="OnTouchEnd()"
       >
         <div class="avatar" :style="{'background': 'url('+user.url+')'}"></div>
-        <p class="user-name">{{user.name}}さん</p>
+        <p class="user-name">{{user.name}}</p>
       </div>
     </div>
-    <div class="flex between buttons">
-      <img src="../assets/cross.png" class="btn btn01" @click="nodeBtn" />
-      <img src="../assets/person.png" class="btn btn02" @click="$router.push('About')" />
-      <img src="../assets/heart.png" class="btn btn03" @click="likeBtn" />
+    <div class="buttons">
+      <button class="btn nopeBtn" :disabled="isProcessing()" @click="nodeBtn"></button>
+      <button class="btn likes" @click="$router.push('About')"></button>
+      <button class="btn likeBtn" :disabled="isProcessing()" @click="likeBtn"></button>
     </div>
   </div>
 </template>
@@ -31,6 +31,8 @@ export default {
       users: [],
       // 擬似的にindexを取得、末尾Btn関数にて使用
       usersLen: null,
+      // ボタンの状態管理
+      processing: false,
       swipe: {
         flag: false,
         threshold: 10,
@@ -51,7 +53,7 @@ export default {
       this.swipe.flag = true;
       this.swipe.start.x = e.touches[0].pageX;
     },
-    OnTouchMove: function(e, index, url) {
+    OnTouchMove: async function(e, index, url) {
       this.swipe.current.x = e.touches[0].pageX;
       this.swipe.distance.x = this.swipe.current.x - this.swipe.start.x;
       if (
@@ -60,6 +62,8 @@ export default {
         this.swipe.distance.x >= this.swipe.threshold
       ) {
         // 右スワイプ後の処理を記述
+        // ボタンのロック
+        this.startProcessing();
         this.swipe.flag = false;
         this.rotateRight(e);
         this.addLikes(index, url);
@@ -70,9 +74,11 @@ export default {
         this.swipe.distance.x >= this.swipe.threshold * -1
       ) {
         // 左スワイプ後の処理を記述
+        // ボタンのロック
+        this.startProcessing();
         this.swipe.flag = false;
         this.rotateLeft(e);
-        this.deleteLikes(url);
+        await this.deleteLikes(url);
       }
     },
     OnTouchEnd: function() {
@@ -84,7 +90,9 @@ export default {
     rotateLeft(e) {
       e.currentTarget.className = "buddy rotateleft";
     },
-    likeBtn() {
+    async likeBtn() {
+      // ボタンのロック
+      this.startProcessing();
       const e = document.querySelector(
         ".buddy:nth-child(" + this.usersLen + ")"
       );
@@ -92,22 +100,20 @@ export default {
 
       const url = this.users[this.usersLen - 1].url;
       this.addLikes(this.usersLen, url);
-
-      this.usersLen -= 1;
     },
-    nodeBtn() {
-      const e = document.querySelector(
+    async nodeBtn() {
+      // ボタンのロック
+      this.startProcessing();
+      console.log(this.usersLen);
+      const e = await document.querySelector(
         ".buddy:nth-child(" + this.usersLen + ")"
       );
       e.classList.add("rotateleft");
 
       const url = this.users[this.usersLen - 1].url;
       this.deleteLikes(url);
-
-      this.usersLen -= 1;
     },
     async addLikes(index, url) {
-      console.log(index);
       var db = firebase.firestore();
       const data = await db
         .collection("likes")
@@ -121,6 +127,11 @@ export default {
           name: this.users[index - 1].name
         });
       }
+
+      this.usersLen -= 1;
+
+      // ボタンのロックを解除
+      this.endProcessing();
     },
     async deleteLikes(url) {
       var db = firebase.firestore();
@@ -135,6 +146,24 @@ export default {
           .doc(data.docs[0].id)
           .delete();
       }
+      console.log("start");
+      console.log(this.usersLen);
+
+      this.usersLen -= 1;
+      console.log(this.usersLen);
+      console.log("end");
+      // ボタンのロックを解除
+      this.endProcessing();
+      console.log("unlock");
+    },
+    startProcessing: function() {
+      this.processing = true;
+    },
+    endProcessing: function() {
+      this.processing = false;
+    },
+    isProcessing: function() {
+      return this.processing;
     }
   },
   async created() {
@@ -149,8 +178,7 @@ export default {
         });
       });
     this.usersLen = this.users.length;
-  },
-  mounted() {}
+  }
 };
 </script>
 
@@ -162,10 +190,13 @@ export default {
   overflow: hidden;
 }
 .user-name {
-  margin-top: 40px;
+  text-align: center;
+  margin-top: 50px;
   background: #000;
 }
 .buttons {
+  display: flex;
+  justify-content: space-around;
   width: 50%;
   margin: 0 auto;
 }
@@ -174,16 +205,27 @@ export default {
   width: 50px;
   height: 50px;
   border-radius: 50%;
-  background: #fff;
+  background-size: cover;
+  background-position: center;
   border: none;
 }
+.nopeBtn {
+  background-image: url("../assets/cross.png");
+}
+.likes {
+  background-image: url("../assets/person.png");
+}
+.likeBtn {
+  background-image: url("../assets/heart.png");
+}
+
 /* tinderスライド描画 */
 #container {
-  width: 80%;
-  padding: 100px 0;
+  width: 50%;
+  padding: 100px 0 50px;
   margin: auto !important;
   display: block;
-  height: 500px;
+  height: 600px;
   position: relative;
   list-style-type: none;
   -webkit-touch-callout: none;
@@ -233,28 +275,12 @@ export default {
   background-position: center;
   background-repeat: no-repeat;
 }
-.like {
-  border-radius: 5px;
-  padding: 5px 10px;
-  border: 2px solid green;
-  color: green;
-  text-transform: uppercase;
-  font-size: 15px;
-  position: absolute;
-  top: 50px;
-  right: 40px;
-  text-shadow: none;
-}
-.dislike {
-  border-radius: 5px;
-  padding: 5px 10px;
-  border: 2px solid red;
-  color: red;
-  text-transform: uppercase;
-  font-size: 15px;
-  position: absolute;
-  top: 50px;
-  left: 40px;
-  text-shadow: none;
+@media screen and (max-width: 480px) {
+  /* tinderスライド描画 */
+  #container {
+    width: 80%;
+    height: 500px;
+    padding-bottom: 100px;
+  }
 }
 </style>
